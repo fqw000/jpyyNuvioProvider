@@ -1,0 +1,11 @@
+{
+  "id": "jpyy",
+  "name": "JPYY (自用)",
+  "description": "nuvio Provider for jpyy",
+  "version": "1.0.0",
+  "author": "wangqifei.eu.org",
+  "supportedTypes": ["movie", "tv"],
+  "filename": "providers/jpyy.js",
+  "enabled": true,
+  "contentLanguage": ["zh", "en"]
+}
