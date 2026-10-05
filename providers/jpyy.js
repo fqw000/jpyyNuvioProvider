@@ -1,6 +1,6 @@
 /**
  * jpyy - Built from src/jpyy/
- * Generated: 2026-10-05T13:27:12.195Z
+ * Generated: 2026-10-05T13:41:37.081Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -178,7 +178,7 @@ var CACHE_TTL = 6 * 60 * 60 * 1e3;
 var metadataCache = /* @__PURE__ */ new Map();
 function checkApiKey() {
   if (!TMDB_API_KEY || TMDB_API_KEY === "3fa903159384423972387659a870b62f") {
-    throw new Error("TMDB_API_KEY is not configured");
+    throw new Error("TMDB_API_KEY \u672A\u914D\u7F6E");
   }
 }
 function uniqueTitles(values) {
@@ -245,24 +245,25 @@ function tmdbGet(_0) {
         url.searchParams.set(key, String(value));
       }
     }
-    const response = yield fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Accept: "application/json"
-      }
-    });
+    let response;
+    try {
+      response = yield fetch(url.toString(), {
+        method: "GET",
+        headers: { Accept: "application/json" }
+      });
+    } catch (netError) {
+      throw new Error(`TMDB \u7F51\u7EDC\u5F02\u5E38 @ ${path}: ${netError.message}`);
+    }
     const text = yield response.text();
     let data;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error(`TMDB returned invalid JSON: HTTP ${response.status}`);
+      throw new Error(`TMDB \u8FD4\u56DE\u975E JSON @ ${path} HTTP ${response.status}`);
     }
     if (!response.ok) {
       const message = (data == null ? void 0 : data.status_message) || (data == null ? void 0 : data.message) || response.statusText;
-      throw new Error(
-        `TMDB request failed: HTTP ${response.status}, ${message}`
-      );
+      throw new Error(`TMDB \u8BF7\u6C42\u5931\u8D25 @ ${path} HTTP ${response.status}: ${message}`);
     }
     return data;
   });
@@ -343,13 +344,13 @@ function resolveTmdbMetadata(_0) {
     const id = String(tmdbId != null ? tmdbId : "").trim();
     const type = String(mediaType != null ? mediaType : "").trim().toLowerCase();
     if (!/^\d+$/.test(id)) {
-      throw new Error(`Invalid TMDB ID: ${tmdbId}`);
+      throw new Error(`\u65E0\u6548 TMDB ID: ${tmdbId}`);
     }
     if (type !== "movie" && type !== "tv") {
-      throw new Error(`Unsupported media type: ${mediaType}`);
+      throw new Error(`\u4E0D\u652F\u6301\u7684\u7C7B\u578B: ${mediaType}`);
     }
     if (type === "tv" && (!Number.isInteger(season) || season < 0)) {
-      throw new Error(`Invalid season: ${season}`);
+      throw new Error(`\u65E0\u6548\u5B63\u6570: ${season}`);
     }
     const cacheKey = `${type}:${id}:${season != null ? season : "-"}`;
     const cached = readCache(cacheKey);
@@ -371,7 +372,7 @@ function resolveTmdbMetadata(_0) {
         ...extraTitles2
       ]);
       if (titles2.length === 0) {
-        throw new Error(`TMDB movie has no usable title: ${id}`);
+        throw new Error(`TMDB \u7535\u5F71\u65E0\u53EF\u7528\u6807\u9898: ${id}`);
       }
       const year = getYear(detail.release_date);
       const result2 = {
@@ -406,7 +407,7 @@ function resolveTmdbMetadata(_0) {
       ...extraTitles
     ]);
     if (titles.length === 0) {
-      throw new Error(`TMDB TV series has no usable title: ${id}`);
+      throw new Error(`TMDB \u5267\u96C6\u65E0\u53EF\u7528\u6807\u9898: ${id}`);
     }
     const seriesYear = getYear(detail.first_air_date);
     const seasonYear = getYear(seasonDetail == null ? void 0 : seasonDetail.air_date);
@@ -448,20 +449,6 @@ var BASE_URL = "https://0996zp.com";
 var CLIENT_TYPE = 1;
 var DEVICE_ID = "39cb57bc-f77b-42c8-84e8-25fe857385d1";
 var MIN_VOD_SCORE = 0.5;
-var debugLogs = [];
-function logDebug(funcName, message) {
-  const d = /* @__PURE__ */ new Date();
-  const pad = (n) => n < 10 ? "0" + n : String(n);
-  const ts = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  debugLogs.push(`[${ts} ${funcName}] ${message}`);
-}
-function flushDebugLogs() {
-  if (debugLogs.length === 0)
-    return "";
-  const result = debugLogs.join(" || ");
-  debugLogs.length = 0;
-  return result;
-}
 var rscCache = /* @__PURE__ */ new Map();
 var RSC_CACHE_TTL = 5 * 60 * 1e3;
 function positiveInteger(value, fieldName) {
@@ -474,19 +461,13 @@ function positiveInteger(value, fieldName) {
 function normalizeInput(tmdbId, mediaType, season, episode) {
   const normalizedId = String(tmdbId != null ? tmdbId : "").trim();
   const normalizedType = String(mediaType != null ? mediaType : "").trim().toLowerCase();
-  if (!normalizedId) {
+  if (!normalizedId)
     throw new Error("tmdbId is required");
-  }
   if (normalizedType !== "movie" && normalizedType !== "tv") {
     throw new Error('mediaType must be either "movie" or "tv"');
   }
   if (normalizedType === "movie") {
-    return {
-      tmdbId: normalizedId,
-      mediaType: normalizedType,
-      season: null,
-      episode: null
-    };
+    return { tmdbId: normalizedId, mediaType: normalizedType, season: null, episode: null };
   }
   return {
     tmdbId: normalizedId,
@@ -516,7 +497,7 @@ function fetchRsc(path) {
     });
     const body = yield response.text();
     if (!response.ok) {
-      throw new Error(`jpyy RSC request failed: HTTP ${response.status}`);
+      throw new Error(`RSC \u8BF7\u6C42\u5931\u8D25 HTTP ${response.status} @ ${path}`);
     }
     rscCache.set(path, { time: Date.now(), body });
     return body;
@@ -648,11 +629,6 @@ function pickVod(items, input, metadata) {
     return [2, 3, 4, 88].includes(typeId1);
   });
   const ranked = candidates.map((item) => ({ item, score: scoreVod(item, metadata) })).filter((entry) => entry.score >= MIN_VOD_SCORE).sort((a, b) => b.score - a.score);
-  if (ranked.length > 0) {
-    logDebug("pickVod", `\u6700\u4F73\u5339\u914D: ${ranked[0].item.vodName} (score=${ranked[0].score.toFixed(2)})`);
-  } else {
-    logDebug("pickVod", `\u65E0\u5339\u914D\uFF0C\u5019\u9009=${candidates.length}\uFF0C\u9608\u503C=${MIN_VOD_SCORE}`);
-  }
   return (_b = (_a = ranked[0]) == null ? void 0 : _a.item) != null ? _b : null;
 }
 function searchVod(input, metadata) {
@@ -660,7 +636,6 @@ function searchVod(input, metadata) {
     const queries = Array.isArray(metadata.searchQueries) ? metadata.searchQueries : [];
     if (queries.length === 0)
       return [];
-    logDebug("searchVod", `\u67E5\u8BE2\u8BCD: ${queries.join(" | ")}`);
     const items = [];
     const seen = /* @__PURE__ */ new Set();
     let successCount = 0;
@@ -683,7 +658,6 @@ function searchVod(input, metadata) {
     }
     if (successCount === 0 && lastError)
       throw lastError;
-    logDebug("searchVod", `\u5171 ${items.length} \u6761\u5019\u9009`);
     return items;
   });
 }
@@ -693,7 +667,7 @@ function getDetail(vodId) {
     const body = yield fetchRsc(path);
     const detail = extractMeta(body);
     if (!detail) {
-      throw new Error(`jpyy detail parsing failed for vodId=${vodId}`);
+      throw new Error(`\u8BE6\u60C5\u89E3\u6790\u5931\u8D25 vodId=${vodId}`);
     }
     return detail;
   });
@@ -740,16 +714,16 @@ function fetchEpisodeStreams(vodId, nid) {
     });
     const body = yield response.text();
     if (!response.ok) {
-      throw new Error(`jpyy stream request failed: HTTP ${response.status}`);
+      throw new Error(`\u6D41\u8BF7\u6C42\u5931\u8D25 HTTP ${response.status} nid=${nid}`);
     }
     let json;
     try {
       json = JSON.parse(body);
     } catch (e) {
-      throw new Error("jpyy stream response is not valid JSON");
+      throw new Error(`\u6D41\u54CD\u5E94\u975E JSON nid=${nid}`);
     }
     if (!json || json.code !== 200) {
-      throw new Error(`jpyy stream API error: ${(json == null ? void 0 : json.msg) || "unknown error"}`);
+      throw new Error(`\u6D41 API \u9519\u8BEF: ${(json == null ? void 0 : json.msg) || "unknown"} nid=${nid}`);
     }
     const list = json.data && Array.isArray(json.data.list) ? json.data.list : [];
     return list;
@@ -772,41 +746,38 @@ function toStream(item, { vodName, tmdbId, vodId, nid } = {}) {
   const title = resolutionName ? `${resolutionName} ${quality}` : `JPYY ${quality}`;
   return {
     name: vodName || PROVIDER_NAME,
-    title: `${tmdbId} - ${vodId} - ${nid}`,
+    title,
     url: rawUrl,
     quality
   };
 }
-function resolveMedia(input) {
-  return __async(this, null, function* () {
-    return resolveTmdbMetadata(input);
-  });
-}
 function getStreams(tmdbId, mediaType, season = null, episode = null) {
   return __async(this, null, function* () {
+    let step = "init";
     try {
-      logDebug("getStreams", `\u5F00\u59CB tmdbId=${tmdbId} mediaType=${mediaType} season=${season} episode=${episode}`);
+      step = "normalizeInput";
       const input = normalizeInput(tmdbId, mediaType, season, episode);
-      const metadata = yield resolveMedia(input);
-      logDebug("getStreams", `TMDB \u6807\u9898=${metadata.title}\uFF0C\u67E5\u8BE2\u8BCD\u6570=${metadata.searchQueries.length}`);
-      if (!metadata || !metadata.title && metadata.vodId == null) {
-        throw new Error("TMDB resolver returned incomplete metadata");
+      step = "resolveTmdbMetadata";
+      const metadata = yield resolveTmdbMetadata(input);
+      if (!metadata || !metadata.title) {
+        throw new Error("TMDB \u5143\u6570\u636E\u4E0D\u5B8C\u6574");
       }
-      let vod = null;
-      if (metadata.vodId != null) {
-        vod = { vodId: metadata.vodId };
-      } else {
-        const items = yield searchVod(input, metadata);
-        vod = pickVod(items, input, metadata);
-      }
+      step = "searchVod";
+      const items = yield searchVod(input, metadata);
+      step = "pickVod";
+      const vod = pickVod(items, input, metadata);
       if (!vod) {
-        logDebug("getStreams", "\u672A\u5339\u914D\u5230\u7AD9\u5185 ID");
         return [];
       }
+      step = "getDetail";
       const detail = yield getDetail(vod.vodId);
       const vodName = detail.vodName || detail.name || metadata.title || "";
+      step = "selectEpisodes";
       const episodes = selectEpisodes(detail, input, metadata);
-      logDebug("getStreams", `\u5267\u96C6\u6570=${episodes.length}`);
+      if (episodes.length === 0) {
+        throw new Error(`\u672A\u5339\u914D\u5230\u7B2C ${episode} \u96C6`);
+      }
+      step = "fetchEpisodeStreams";
       const streams = [];
       const seen = /* @__PURE__ */ new Set();
       let lastError = null;
@@ -814,8 +785,8 @@ function getStreams(tmdbId, mediaType, season = null, episode = null) {
         if (episodeItem.nid == null)
           continue;
         try {
-          const items = yield fetchEpisodeStreams(vod.vodId, episodeItem.nid);
-          for (const item of items) {
+          const items2 = yield fetchEpisodeStreams(vod.vodId, episodeItem.nid);
+          for (const item of items2) {
             const stream = toStream(item, {
               vodName,
               tmdbId: input.tmdbId,
@@ -833,19 +804,17 @@ function getStreams(tmdbId, mediaType, season = null, episode = null) {
           lastError = error;
         }
       }
-      if (streams.length === 0 && lastError)
-        throw lastError;
-      logDebug("getStreams", `\u8FD4\u56DE ${streams.length} \u4E2A\u6D41`);
-      if (streams.length > 0) {
-        streams[0].name = flushDebugLogs() || streams[0].name;
+      if (streams.length === 0) {
+        if (lastError)
+          throw lastError;
+        throw new Error("\u672A\u83B7\u53D6\u5230\u4EFB\u4F55\u6D41\u5730\u5740");
       }
       return streams;
     } catch (e) {
-      logDebug("getStreams", `\u51FA\u9519: ${e.message}`);
       return [
         {
-          name: flushDebugLogs(),
-          title: "ERROR",
+          name: PROVIDER_NAME,
+          title: `[${step}] ${e.message}`,
           url: "https://test.com/error",
           quality: "ERROR"
         }
