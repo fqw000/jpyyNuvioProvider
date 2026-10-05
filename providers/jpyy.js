@@ -1,6 +1,6 @@
 /**
  * jpyy - Built from src/jpyy/
- * Generated: 2026-10-05T12:30:26.638Z
+ * Generated: 2026-10-05T13:27:12.195Z
  */
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -186,28 +186,23 @@ function uniqueTitles(values) {
   const seen = /* @__PURE__ */ new Set();
   function visit(value) {
     if (Array.isArray(value)) {
-      for (const item of value) {
+      for (const item of value)
         visit(item);
-      }
       return;
     }
-    if (typeof value !== "string") {
+    if (typeof value !== "string")
       return;
-    }
     const title = value.trim();
-    if (!title) {
+    if (!title)
       return;
-    }
     const key = title.normalize("NFKC").toLowerCase().replace(/\s+/g, " ");
-    if (seen.has(key)) {
+    if (seen.has(key))
       return;
-    }
     seen.add(key);
     result.push(title);
   }
-  for (const value of values) {
+  for (const value of values)
     visit(value);
-  }
   return result;
 }
 function getYear(value) {
@@ -215,22 +210,10 @@ function getYear(value) {
   return match ? Number(match[1]) : null;
 }
 function chineseNumber(value) {
-  const digits = [
-    "\u96F6",
-    "\u4E00",
-    "\u4E8C",
-    "\u4E09",
-    "\u56DB",
-    "\u4E94",
-    "\u516D",
-    "\u4E03",
-    "\u516B",
-    "\u4E5D"
-  ];
+  const digits = ["\u96F6", "\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D", "\u4E03", "\u516B", "\u4E5D"];
   const number = Number(value);
-  if (number >= 0 && number <= 10) {
+  if (number >= 0 && number <= 10)
     return digits[number];
-  }
   if (number > 10 && number < 20) {
     return `\u5341${number % 10 ? digits[number % 10] : ""}`;
   }
@@ -240,6 +223,17 @@ function chineseNumber(value) {
     return `${tens}\u5341${ones}`;
   }
   return String(number);
+}
+function getTitlePriority(title) {
+  if (!title)
+    return -1;
+  const chineseCount = (title.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const totalLength = title.length;
+  if (/^[\u4e00-\u9fa5]+$/.test(title))
+    return 3;
+  if (chineseCount / totalLength > 0.5)
+    return 2;
+  return 0;
 }
 function tmdbGet(_0) {
   return __async(this, arguments, function* (path, params = {}) {
@@ -262,9 +256,7 @@ function tmdbGet(_0) {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error(
-        `TMDB returned invalid JSON: HTTP ${response.status}`
-      );
+      throw new Error(`TMDB returned invalid JSON: HTTP ${response.status}`);
     }
     if (!response.ok) {
       const message = (data == null ? void 0 : data.status_message) || (data == null ? void 0 : data.message) || response.statusText;
@@ -288,31 +280,27 @@ function extractExtraTitles(alternative, translations) {
   var _a, _b, _c;
   const alternativeItems = (_b = (_a = alternative == null ? void 0 : alternative.titles) != null ? _a : alternative == null ? void 0 : alternative.results) != null ? _b : [];
   const translationItems = (_c = translations == null ? void 0 : translations.data) != null ? _c : [];
-  return uniqueTitles([
+  const raw = uniqueTitles([
     ...alternativeItems.map(
       (item) => {
         var _a2, _b2, _c2;
         return (_c2 = (_b2 = (_a2 = item.title) != null ? _a2 : item.name) != null ? _b2 : item.original_title) != null ? _c2 : item.original_name;
       }
     ),
-    ...translationItems.map(
-      (item) => {
-        var _a2;
-        return (_a2 = item.title) != null ? _a2 : item.name;
-      }
-    )
+    ...translationItems.map((item) => {
+      var _a2;
+      return (_a2 = item.title) != null ? _a2 : item.name;
+    })
   ]);
+  return raw.sort((a, b) => getTitlePriority(b) - getTitlePriority(a));
 }
 function buildMovieSearchQueries(titles, year) {
-  const baseQueries = titles.slice(0, 6);
-  const yearQueries = year ? titles.slice(0, 2).map((title) => `${title} ${year}`) : [];
-  return uniqueTitles([
-    ...baseQueries,
-    ...yearQueries
-  ]).slice(0, 8);
+  const baseQueries = titles.slice(0, 3);
+  const yearQueries = year ? titles.slice(0, 1).map((title) => `${title} ${year}`) : [];
+  return uniqueTitles([...baseQueries, ...yearQueries]).slice(0, 5);
 }
 function buildTvSearchQueries(titles, season, seasonName, seasonYear, seriesYear) {
-  const baseQueries = titles.slice(0, 6);
+  const baseQueries = titles.slice(0, 3);
   const seasonLabels = uniqueTitles([
     seasonName,
     `\u7B2C${season}\u5B63`,
@@ -320,24 +308,23 @@ function buildTvSearchQueries(titles, season, seasonName, seasonYear, seriesYear
     `Season ${season}`
   ]);
   const seasonQueries = [];
-  for (const title of titles.slice(0, 3)) {
-    for (const label of seasonLabels.slice(0, 2)) {
+  for (const title of titles.slice(0, 2)) {
+    for (const label of seasonLabels.slice(0, 1)) {
       seasonQueries.push(`${title} ${label}`);
     }
   }
   const queryYear = seasonYear != null ? seasonYear : seriesYear;
-  const yearQueries = queryYear ? titles.slice(0, 2).map((title) => `${title} ${queryYear}`) : [];
+  const yearQueries = queryYear ? titles.slice(0, 1).map((title) => `${title} ${queryYear}`) : [];
   return uniqueTitles([
     ...baseQueries,
-    ...seasonQueries.slice(0, 4),
+    ...seasonQueries.slice(0, 2),
     ...yearQueries
-  ]).slice(0, 12);
+  ]).slice(0, 6);
 }
 function readCache(key) {
   const cached = metadataCache.get(key);
-  if (!cached) {
+  if (!cached)
     return null;
-  }
   if (Date.now() - cached.time >= CACHE_TTL) {
     metadataCache.delete(key);
     return null;
@@ -351,11 +338,7 @@ function writeCache(key, value) {
   });
 }
 function resolveTmdbMetadata(_0) {
-  return __async(this, arguments, function* ({
-    tmdbId,
-    mediaType,
-    season = null
-  }) {
+  return __async(this, arguments, function* ({ tmdbId, mediaType, season = null }) {
     var _a, _b, _c;
     const id = String(tmdbId != null ? tmdbId : "").trim();
     const type = String(mediaType != null ? mediaType : "").trim().toLowerCase();
@@ -363,49 +346,32 @@ function resolveTmdbMetadata(_0) {
       throw new Error(`Invalid TMDB ID: ${tmdbId}`);
     }
     if (type !== "movie" && type !== "tv") {
-      throw new Error(
-        `Unsupported media type: ${mediaType}`
-      );
+      throw new Error(`Unsupported media type: ${mediaType}`);
     }
     if (type === "tv" && (!Number.isInteger(season) || season < 0)) {
-      throw new Error(
-        `Invalid season: ${season}`
-      );
+      throw new Error(`Invalid season: ${season}`);
     }
     const cacheKey = `${type}:${id}:${season != null ? season : "-"}`;
     const cached = readCache(cacheKey);
-    if (cached) {
+    if (cached)
       return cached;
-    }
     const typePath = type === "movie" ? "movie" : "tv";
-    const detail = yield tmdbGet(
-      `${typePath}/${encodeURIComponent(id)}`,
-      {
-        language: "zh-CN"
-      }
-    );
+    const detail = yield tmdbGet(`${typePath}/${encodeURIComponent(id)}`, {
+      language: "zh-CN"
+    });
     if (type === "movie") {
       const [alternative2, translations2] = yield Promise.all([
-        optionalTmdbGet(
-          `movie/${encodeURIComponent(id)}/alternative_names`
-        ),
-        optionalTmdbGet(
-          `movie/${encodeURIComponent(id)}/translations`
-        )
+        optionalTmdbGet(`movie/${encodeURIComponent(id)}/alternative_names`),
+        optionalTmdbGet(`movie/${encodeURIComponent(id)}/translations`)
       ]);
-      const extraTitles2 = extractExtraTitles(
-        alternative2,
-        translations2
-      );
+      const extraTitles2 = extractExtraTitles(alternative2, translations2);
       const titles2 = uniqueTitles([
         detail.title,
         detail.original_title,
         ...extraTitles2
       ]);
       if (titles2.length === 0) {
-        throw new Error(
-          `TMDB movie has no usable title: ${id}`
-        );
+        throw new Error(`TMDB movie has no usable title: ${id}`);
       }
       const year = getYear(detail.release_date);
       const result2 = {
@@ -426,35 +392,21 @@ function resolveTmdbMetadata(_0) {
       return result2;
     }
     const [alternative, translations, seasonDetail] = yield Promise.all([
+      optionalTmdbGet(`tv/${encodeURIComponent(id)}/alternative_names`),
+      optionalTmdbGet(`tv/${encodeURIComponent(id)}/translations`),
       optionalTmdbGet(
-        `tv/${encodeURIComponent(id)}/alternative_names`
-      ),
-      optionalTmdbGet(
-        `tv/${encodeURIComponent(id)}/translations`
-      ),
-      optionalTmdbGet(
-        [
-          `tv/${encodeURIComponent(id)}`,
-          `season/${encodeURIComponent(season)}`
-        ].join("/"),
-        {
-          language: "zh-CN"
-        }
+        `tv/${encodeURIComponent(id)}/season/${encodeURIComponent(season)}`,
+        { language: "zh-CN" }
       )
     ]);
-    const extraTitles = extractExtraTitles(
-      alternative,
-      translations
-    );
+    const extraTitles = extractExtraTitles(alternative, translations);
     const titles = uniqueTitles([
       detail.name,
       detail.original_name,
       ...extraTitles
     ]);
     if (titles.length === 0) {
-      throw new Error(
-        `TMDB TV series has no usable title: ${id}`
-      );
+      throw new Error(`TMDB TV series has no usable title: ${id}`);
     }
     const seriesYear = getYear(detail.first_air_date);
     const seasonYear = getYear(seasonDetail == null ? void 0 : seasonDetail.air_date);
@@ -495,6 +447,23 @@ var PROVIDER_NAME = "jpyy";
 var BASE_URL = "https://0996zp.com";
 var CLIENT_TYPE = 1;
 var DEVICE_ID = "39cb57bc-f77b-42c8-84e8-25fe857385d1";
+var MIN_VOD_SCORE = 0.5;
+var debugLogs = [];
+function logDebug(funcName, message) {
+  const d = /* @__PURE__ */ new Date();
+  const pad = (n) => n < 10 ? "0" + n : String(n);
+  const ts = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  debugLogs.push(`[${ts} ${funcName}] ${message}`);
+}
+function flushDebugLogs() {
+  if (debugLogs.length === 0)
+    return "";
+  const result = debugLogs.join(" || ");
+  debugLogs.length = 0;
+  return result;
+}
+var rscCache = /* @__PURE__ */ new Map();
+var RSC_CACHE_TTL = 5 * 60 * 1e3;
 function positiveInteger(value, fieldName) {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 1) {
@@ -509,9 +478,7 @@ function normalizeInput(tmdbId, mediaType, season, episode) {
     throw new Error("tmdbId is required");
   }
   if (normalizedType !== "movie" && normalizedType !== "tv") {
-    throw new Error(
-      'mediaType must be either "movie" or "tv"'
-    );
+    throw new Error('mediaType must be either "movie" or "tv"');
   }
   if (normalizedType === "movie") {
     return {
@@ -529,14 +496,14 @@ function normalizeInput(tmdbId, mediaType, season, episode) {
   };
 }
 function encodeQuery(params) {
-  return Object.keys(params).map(
-    (key) => `${encodeURIComponent(key)}=${encodeURIComponent(
-      String(params[key])
-    )}`
-  ).join("&");
+  return Object.keys(params).map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`).join("&");
 }
 function fetchRsc(path) {
   return __async(this, null, function* () {
+    const cached = rscCache.get(path);
+    if (cached && Date.now() - cached.time < RSC_CACHE_TTL) {
+      return cached.body;
+    }
     const response = yield fetch(`${BASE_URL}${path}`, {
       method: "GET",
       headers: {
@@ -549,209 +516,164 @@ function fetchRsc(path) {
     });
     const body = yield response.text();
     if (!response.ok) {
-      throw new Error(
-        `jpyy RSC request failed: HTTP ${response.status}`
-      );
+      throw new Error(`jpyy RSC request failed: HTTP ${response.status}`);
     }
+    rscCache.set(path, { time: Date.now(), body });
     return body;
   });
 }
 function getBroadTypeId(item) {
   return Number(item.typeId1);
 }
-var MIN_VOD_SCORE = 120;
 function normalizeName(value) {
   return String(value != null ? value : "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 }
-function scoreTitleMatch(candidate, target) {
-  const normalizedCandidate = normalizeName(candidate);
-  const normalizedTarget = normalizeName(target);
-  if (!normalizedCandidate || !normalizedTarget) {
+function similarity(s1, s2) {
+  if (!s1 || !s2)
     return 0;
-  }
-  if (normalizedCandidate === normalizedTarget) {
-    return 200;
-  }
-  const shortestLength = Math.min(
-    normalizedCandidate.length,
-    normalizedTarget.length
-  );
-  if (shortestLength < 2) {
+  s1 = String(s1).toLowerCase().trim();
+  s2 = String(s2).toLowerCase().trim();
+  if (s1 === s2)
+    return 1;
+  if (s1.includes(s2) || s2.includes(s1))
+    return 0.85;
+  let [a, b] = [s1, s2];
+  if (a.length < b.length)
+    [a, b] = [b, a];
+  const lenA = a.length;
+  const lenB = b.length;
+  if (lenA === 0 || lenB === 0)
     return 0;
+  let prev = new Array(lenB + 1);
+  let curr = new Array(lenB + 1);
+  for (let j = 0; j <= lenB; j++)
+    prev[j] = j;
+  for (let i = 1; i <= lenA; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= lenB; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
   }
-  const containsChinese = /[\u3400-\u9fff]/u.test(normalizedTarget);
-  if (!containsChinese && normalizedTarget.length < 4) {
-    return 0;
-  }
-  const candidateContainsTarget = normalizedCandidate.includes(normalizedTarget);
-  const targetContainsCandidate = normalizedTarget.includes(normalizedCandidate);
-  if (!candidateContainsTarget && !targetContainsCandidate) {
-    return 0;
-  }
-  const ratio = shortestLength / Math.max(
-    normalizedCandidate.length,
-    normalizedTarget.length
-  );
-  if (ratio >= 0.6) {
-    return 120;
-  }
-  return 85;
-}
-function scoreYearMatch(item, metadata) {
-  var _a;
-  const rawYear = String(
-    (_a = item.vodYear) != null ? _a : ""
-  ).trim();
-  const itemYear = Number.parseInt(
-    rawYear.slice(0, 4),
-    10
-  );
-  if (!Number.isFinite(itemYear)) {
-    return 0;
-  }
-  const expectedYears = [
-    metadata.seasonYear,
-    metadata.year,
-    metadata.seriesYear
-  ].filter(
-    (value) => Number.isInteger(value)
-  );
-  if (expectedYears.includes(itemYear)) {
-    return 60;
-  }
-  if (expectedYears.some(
-    (year) => Math.abs(year - itemYear) <= 1
-  )) {
-    return 15;
-  }
-  return 0;
+  return 1 - prev[lenB] / Math.max(lenA, lenB);
 }
 function hasSeasonMarker(item, metadata) {
   var _a;
-  const rawName = String(
-    (_a = item.vodName) != null ? _a : ""
-  ).normalize("NFKC").toLowerCase();
+  const rawName = String((_a = item.vodName) != null ? _a : "").normalize("NFKC").toLowerCase();
   const normalizedName = normalizeName(rawName);
   const labels = Array.isArray(metadata.seasonLabels) ? metadata.seasonLabels : [];
-  const normalizedLabelMatch = labels.some(
-    (label) => {
-      const normalizedLabel = normalizeName(label);
-      return normalizedLabel.length >= 2 && normalizedName.includes(normalizedLabel);
-    }
-  );
-  if (normalizedLabelMatch) {
+  const normalizedLabelMatch = labels.some((label) => {
+    const normalizedLabel = normalizeName(label);
+    return normalizedLabel.length >= 2 && normalizedName.includes(normalizedLabel);
+  });
+  if (normalizedLabelMatch)
     return true;
-  }
   const season = metadata.season;
-  if (!Number.isInteger(season)) {
+  if (!Number.isInteger(season))
     return false;
-  }
-  const escapedSeason = String(season).replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&"
-  );
-  const chineseSeasonPattern = new RegExp(
-    `\u7B2C\\s*0*${escapedSeason}\\s*\u5B63(?![0-9])`,
-    "i"
-  );
-  const englishSeasonPattern = new RegExp(
-    `(?:season)\\s*0*${escapedSeason}(?![0-9])`,
-    "i"
-  );
-  const shortSeasonPattern = new RegExp(
-    `(?:^|[^a-z0-9])s\\s*0*${escapedSeason}(?![0-9])`,
-    "i"
-  );
+  const escapedSeason = String(season).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const chineseSeasonPattern = new RegExp(`\u7B2C\\s*0*${escapedSeason}\\s*\u5B63(?![0-9])`, "i");
+  const englishSeasonPattern = new RegExp(`(?:season)\\s*0*${escapedSeason}(?![0-9])`, "i");
+  const shortSeasonPattern = new RegExp(`(?:^|[^a-z0-9])s\\s*0*${escapedSeason}(?![0-9])`, "i");
   return chineseSeasonPattern.test(rawName) || englishSeasonPattern.test(rawName) || shortSeasonPattern.test(rawName);
-}
-function scoreVod(item, metadata) {
-  const targetTitles = uniqueValues([
-    metadata.title,
-    metadata.originalTitle,
-    ...Array.isArray(metadata.aliases) ? metadata.aliases : []
-  ]);
-  let titleScore = 0;
-  for (const target of targetTitles) {
-    titleScore = Math.max(
-      titleScore,
-      scoreTitleMatch(
-        item.vodName,
-        target
-      )
-    );
-  }
-  if (titleScore <= 0) {
-    return 0;
-  }
-  let score = titleScore;
-  score += scoreYearMatch(
-    item,
-    metadata
-  );
-  if (hasSeasonMarker(item, metadata)) {
-    score += 60;
-  }
-  return score;
 }
 function uniqueValues(values) {
   const result = [];
   const seen = /* @__PURE__ */ new Set();
   for (const value of values) {
-    if (typeof value !== "string") {
+    if (typeof value !== "string")
       continue;
-    }
     const normalized = value.normalize("NFKC").toLowerCase().trim();
-    if (!normalized || seen.has(normalized)) {
+    if (!normalized || seen.has(normalized))
       continue;
-    }
     seen.add(normalized);
     result.push(value);
   }
   return result;
 }
+function scoreVod(item, metadata) {
+  var _a;
+  const candidateTitles = uniqueValues([
+    metadata.title,
+    metadata.originalTitle,
+    ...Array.isArray(metadata.aliases) ? metadata.aliases : []
+  ]);
+  if (candidateTitles.length === 0)
+    return 0;
+  let maxSim = 0;
+  for (const t of candidateTitles) {
+    const sim = similarity(t, item.vodName);
+    if (sim > maxSim)
+      maxSim = sim;
+  }
+  if (maxSim < 0.3)
+    return 0;
+  let score = maxSim;
+  const rawYear = String((_a = item.vodYear) != null ? _a : "").trim();
+  const itemYear = Number.parseInt(rawYear.slice(0, 4), 10);
+  if (Number.isFinite(itemYear)) {
+    const expectedYears = [metadata.seasonYear, metadata.year, metadata.seriesYear].filter(
+      (v) => Number.isInteger(v)
+    );
+    if (expectedYears.includes(itemYear)) {
+      score += 0.3;
+    } else if (expectedYears.some((y) => Math.abs(y - itemYear) <= 1)) {
+      score += 0.15;
+    } else if (expectedYears.length > 0 && expectedYears.every((y) => Math.abs(y - itemYear) > 3)) {
+      score -= 0.3;
+    }
+  }
+  for (const t of candidateTitles) {
+    if (item.vodName === t) {
+      score += 0.5;
+      break;
+    }
+    if (item.vodName.includes(t) || t.includes(item.vodName)) {
+      score += 0.2;
+      break;
+    }
+  }
+  if (hasSeasonMarker(item, metadata)) {
+    score += 0.3;
+  }
+  return score;
+}
 function pickVod(items, input, metadata) {
   var _a, _b;
   const candidates = items.filter((item) => {
     const typeId1 = getBroadTypeId(item);
-    if (input.mediaType === "movie") {
+    if (input.mediaType === "movie")
       return typeId1 === 1;
-    }
     return [2, 3, 4, 88].includes(typeId1);
   });
-  const ranked = candidates.map((item) => ({
-    item,
-    score: scoreVod(item, metadata)
-  })).filter(
-    (entry) => entry.score >= MIN_VOD_SCORE
-  ).sort(
-    (a, b) => b.score - a.score
-  );
+  const ranked = candidates.map((item) => ({ item, score: scoreVod(item, metadata) })).filter((entry) => entry.score >= MIN_VOD_SCORE).sort((a, b) => b.score - a.score);
+  if (ranked.length > 0) {
+    logDebug("pickVod", `\u6700\u4F73\u5339\u914D: ${ranked[0].item.vodName} (score=${ranked[0].score.toFixed(2)})`);
+  } else {
+    logDebug("pickVod", `\u65E0\u5339\u914D\uFF0C\u5019\u9009=${candidates.length}\uFF0C\u9608\u503C=${MIN_VOD_SCORE}`);
+  }
   return (_b = (_a = ranked[0]) == null ? void 0 : _a.item) != null ? _b : null;
 }
 function searchVod(input, metadata) {
   return __async(this, null, function* () {
-    const queries = Array.isArray(
-      metadata.searchQueries
-    ) ? metadata.searchQueries : [];
-    if (queries.length === 0) {
+    const queries = Array.isArray(metadata.searchQueries) ? metadata.searchQueries : [];
+    if (queries.length === 0)
       return [];
-    }
+    logDebug("searchVod", `\u67E5\u8BE2\u8BCD: ${queries.join(" | ")}`);
     const items = [];
     const seen = /* @__PURE__ */ new Set();
     let successCount = 0;
     let lastError = null;
     for (const query of queries) {
       try {
-        const body = yield fetchRsc(
-          `/vod/search/${encodeURIComponent(query)}`
-        );
+        const body = yield fetchRsc(`/vod/search/${encodeURIComponent(query)}`);
         successCount += 1;
         const results = extractVodItems(body);
         for (const item of results) {
           const key = String(item.vodId);
-          if (seen.has(key)) {
+          if (seen.has(key))
             continue;
-          }
           seen.add(key);
           items.push(item);
         }
@@ -759,9 +681,9 @@ function searchVod(input, metadata) {
         lastError = error;
       }
     }
-    if (successCount === 0 && lastError) {
+    if (successCount === 0 && lastError)
       throw lastError;
-    }
+    logDebug("searchVod", `\u5171 ${items.length} \u6761\u5019\u9009`);
     return items;
   });
 }
@@ -771,42 +693,27 @@ function getDetail(vodId) {
     const body = yield fetchRsc(path);
     const detail = extractMeta(body);
     if (!detail) {
-      throw new Error(
-        `jpyy detail parsing failed for vodId=${vodId}`
-      );
+      throw new Error(`jpyy detail parsing failed for vodId=${vodId}`);
     }
     return detail;
   });
 }
 function selectEpisodes(detail, input, metadata) {
   const list = Array.isArray(detail.episodeList) ? detail.episodeList : [];
-  if (input.mediaType === "movie") {
+  if (input.mediaType === "movie")
     return list;
-  }
-  if (metadata.episodeNid != null) {
-    return [
-      {
-        nid: metadata.episodeNid
-      }
-    ];
-  }
+  if (metadata.episodeNid != null)
+    return [{ nid: metadata.episodeNid }];
   const wanted = String(input.episode);
-  const byName = list.find(
-    (item) => String(item.name).trim() === wanted
-  );
-  if (byName) {
+  const byName = list.find((item) => String(item.name).trim() === wanted);
+  if (byName)
     return [byName];
-  }
-  const bySort = list.find(
-    (item) => Number(item.sort) === input.episode
-  );
-  if (bySort) {
+  const bySort = list.find((item) => Number(item.sort) === input.episode);
+  if (bySort)
     return [bySort];
-  }
   const byIndex = list[input.episode - 1];
-  if (byIndex) {
+  if (byIndex)
     return [byIndex];
-  }
   return [];
 }
 function fetchEpisodeStreams(vodId, nid) {
@@ -817,73 +724,51 @@ function fetchEpisodeStreams(vodId, nid) {
       nid: String(nid)
     };
     const t = Date.now();
-    const sign = genSign({
-      method: "GET",
-      params,
-      t
-    });
+    const sign = genSign({ method: "GET", params, t });
     const path = `/api/mw-movie/anonymous/v2/video/episode/url?${encodeQuery(params)}`;
-    const response = yield fetch(
-      `${BASE_URL}${path}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "client-type": String(CLIENT_TYPE),
-          deviceId: DEVICE_ID,
-          sign,
-          t: String(t),
-          authorization: "",
-          Referer: `${BASE_URL}/vod/play/${vodId}/sid/${nid}`
-        }
+    const response = yield fetch(`${BASE_URL}${path}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "client-type": String(CLIENT_TYPE),
+        deviceId: DEVICE_ID,
+        sign,
+        t: String(t),
+        authorization: "",
+        Referer: `${BASE_URL}/vod/play/${vodId}/sid/${nid}`
       }
-    );
+    });
     const body = yield response.text();
     if (!response.ok) {
-      throw new Error(
-        `jpyy stream request failed: HTTP ${response.status}`
-      );
+      throw new Error(`jpyy stream request failed: HTTP ${response.status}`);
     }
     let json;
     try {
       json = JSON.parse(body);
     } catch (e) {
-      throw new Error(
-        "jpyy stream response is not valid JSON"
-      );
+      throw new Error("jpyy stream response is not valid JSON");
     }
     if (!json || json.code !== 200) {
-      throw new Error(
-        `jpyy stream API error: ${(json == null ? void 0 : json.msg) || "unknown error"}`
-      );
+      throw new Error(`jpyy stream API error: ${(json == null ? void 0 : json.msg) || "unknown error"}`);
     }
     const list = json.data && Array.isArray(json.data.list) ? json.data.list : [];
     return list;
   });
 }
-function toStream(item, {
-  vodName,
-  tmdbId,
-  vodId,
-  nid
-} = {}) {
-  if (!item || !item.url) {
+function toStream(item, { vodName, tmdbId, vodId, nid } = {}) {
+  if (!item || !item.url)
     return null;
-  }
   const rawUrl = String(item.url).trim();
   try {
     const parsed = new URL(rawUrl);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
       return null;
-    }
   } catch (e) {
     return null;
   }
   const resolution = Number(item.resolution);
   const quality = Number.isFinite(resolution) ? `${Math.round(resolution)}p` : "unknown";
-  const resolutionName = String(
-    item.resolutionName || ""
-  ).trim();
+  const resolutionName = String(item.resolutionName || "").trim();
   const title = resolutionName ? `${resolutionName} ${quality}` : `JPYY ${quality}`;
   return {
     name: vodName || PROVIDER_NAME,
@@ -899,79 +784,72 @@ function resolveMedia(input) {
 }
 function getStreams(tmdbId, mediaType, season = null, episode = null) {
   return __async(this, null, function* () {
-    const input = normalizeInput(
-      tmdbId,
-      mediaType,
-      season,
-      episode
-    );
-    const metadata = yield resolveMedia(input);
-    if (!metadata || !metadata.title && metadata.vodId == null) {
-      throw new Error(
-        "TMDB resolver returned incomplete metadata"
-      );
-    }
-    let vod = null;
-    if (metadata.vodId != null) {
-      vod = {
-        vodId: metadata.vodId
-      };
-    } else {
-      const items = yield searchVod(
-        input,
-        metadata
-      );
-      vod = pickVod(
-        items,
-        input,
-        metadata
-      );
-    }
-    if (!vod) {
-      return [];
-    }
-    const detail = yield getDetail(vod.vodId);
-    const vodName = detail.vodName || detail.name || metadata.title || "";
-    const episodes = selectEpisodes(
-      detail,
-      input,
-      metadata
-    );
-    const streams = [];
-    const seen = /* @__PURE__ */ new Set();
-    let lastError = null;
-    for (const episodeItem of episodes) {
-      if (episodeItem.nid == null) {
-        continue;
+    try {
+      logDebug("getStreams", `\u5F00\u59CB tmdbId=${tmdbId} mediaType=${mediaType} season=${season} episode=${episode}`);
+      const input = normalizeInput(tmdbId, mediaType, season, episode);
+      const metadata = yield resolveMedia(input);
+      logDebug("getStreams", `TMDB \u6807\u9898=${metadata.title}\uFF0C\u67E5\u8BE2\u8BCD\u6570=${metadata.searchQueries.length}`);
+      if (!metadata || !metadata.title && metadata.vodId == null) {
+        throw new Error("TMDB resolver returned incomplete metadata");
       }
-      try {
-        const items = yield fetchEpisodeStreams(
-          vod.vodId,
-          episodeItem.nid
-        );
-        for (const item of items) {
-          const stream = toStream(item, {
-            vodName,
-            tmdbId: input.tmdbId,
-            vodId: vod.vodId,
-            nid: episodeItem.nid
-          });
-          if (!stream) {
-            continue;
+      let vod = null;
+      if (metadata.vodId != null) {
+        vod = { vodId: metadata.vodId };
+      } else {
+        const items = yield searchVod(input, metadata);
+        vod = pickVod(items, input, metadata);
+      }
+      if (!vod) {
+        logDebug("getStreams", "\u672A\u5339\u914D\u5230\u7AD9\u5185 ID");
+        return [];
+      }
+      const detail = yield getDetail(vod.vodId);
+      const vodName = detail.vodName || detail.name || metadata.title || "";
+      const episodes = selectEpisodes(detail, input, metadata);
+      logDebug("getStreams", `\u5267\u96C6\u6570=${episodes.length}`);
+      const streams = [];
+      const seen = /* @__PURE__ */ new Set();
+      let lastError = null;
+      for (const episodeItem of episodes) {
+        if (episodeItem.nid == null)
+          continue;
+        try {
+          const items = yield fetchEpisodeStreams(vod.vodId, episodeItem.nid);
+          for (const item of items) {
+            const stream = toStream(item, {
+              vodName,
+              tmdbId: input.tmdbId,
+              vodId: vod.vodId,
+              nid: episodeItem.nid
+            });
+            if (!stream)
+              continue;
+            if (seen.has(stream.url))
+              continue;
+            seen.add(stream.url);
+            streams.push(stream);
           }
-          if (seen.has(stream.url)) {
-            continue;
-          }
-          seen.add(stream.url);
-          streams.push(stream);
+        } catch (error) {
+          lastError = error;
         }
-      } catch (error) {
-        lastError = error;
       }
+      if (streams.length === 0 && lastError)
+        throw lastError;
+      logDebug("getStreams", `\u8FD4\u56DE ${streams.length} \u4E2A\u6D41`);
+      if (streams.length > 0) {
+        streams[0].name = flushDebugLogs() || streams[0].name;
+      }
+      return streams;
+    } catch (e) {
+      logDebug("getStreams", `\u51FA\u9519: ${e.message}`);
+      return [
+        {
+          name: flushDebugLogs(),
+          title: "ERROR",
+          url: "https://test.com/error",
+          quality: "ERROR"
+        }
+      ];
     }
-    if (streams.length === 0 && lastError) {
-      throw lastError;
-    }
-    return streams;
   });
 }
