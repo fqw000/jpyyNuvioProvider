@@ -1,26 +1,19 @@
-[
-  {
-    "id": "template-provider",
-    "name": "Template Provider",
-    "description": "A starter template for creating Nuvio providers.",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "supportedTypes": [
-      "movie",
-      "tv"
-    ],
-    "filename": "providers/template.js",
-    "enabled": false,
-    "logo": "",
-    "contentLanguage": [
-      "en"
-    ],
-    "formats": [
-      "mp4",
-      "mkv"
-    ],
-    "limited": false,
-    "disabledPlatforms": [],
-    "supportsExternalPlayer": true
-  }
-]
+{
+  "name": "JPYY Repo",
+  "version": "1.0.0",
+  "scrapers": [
+    {
+      "id": "jpyy",
+      "name": "JPYY",
+      "description": "JPYY streaming provider",
+      "version": "1.0.0",
+      "author": "wangqifei.eu.org",
+      "supportedTypes": ["movie", "tv"],
+      "filename": "providers/jpyy.js",
+      "enabled": true,
+      "formats": ["mp4", "mkv"],
+      "logo": "https://i.imgur.com/9bGkGMi.png",
+      "contentLanguage": ["en"]
+    }
+  ]
+}
