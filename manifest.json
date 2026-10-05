@@ -5,15 +5,15 @@
     {
       "id": "jpyy",
       "name": "JPYY",
-      "description": "JPYY streaming provider",
+      "description": "JPYY streaming provider。 提供: 电影 电视剧 短剧 综艺 动漫 五大类型。",
       "version": "1.0.0",
       "author": "wangqifei.eu.org",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/jpyy.js",
       "enabled": true,
-      "formats": ["mp4", "mkv"],
-      "logo": "https://i.imgur.com/9bGkGMi.png",
-      "contentLanguage": ["en"]
+      "formats": ["mp4", "mkv", "m3u8"],
+      "logo": "https://s2.loli.net/2023/06/10/xIeQpSEKYM2c8zU.png",
+      "contentLanguage": ["en", "zh"]
     }
   ]
 }
