@@ -57,7 +57,7 @@
 
 打开 `providers/jpyy.js`，找到：
 ```javascript
-const TMDB_API_KEY = 'e5c3c7269a147fee368c3649ddd98875';
+const TMDB_API_KEY = '';
 ```
 替换为你自己的 Key：
 ```javascript
