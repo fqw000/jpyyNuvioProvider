@@ -122,11 +122,6 @@ function hasSeasonMarker(item, metadata) {
   return cn.test(rawName) || en.test(rawName) || sn.test(rawName);
 }
 
-/**
- * 🚀 季号硬过滤：如果标题显式出现了「非目标季号」，则返回 true
- * 例如目标季=2，标题含「第三季」或「S3」→ 返回 true（应丢弃该候选）
- * 若标题不含任何季号标记，则返回 false（保守起见，不丢弃）
- */
 function hasWrongSeasonMark(vodName, targetSeason) {
   if (!vodName || !Number.isInteger(targetSeason)) return false;
   var re = /第\s*(\d+)\s*季|(?:^|[^a-z0-9])S(\d+)(?![0-9])/gi;
@@ -490,7 +485,7 @@ function getDetail(vodId) {
 function selectEpisodes(detail, input, metadata) {
   var list = Array.isArray(detail.episodeList) ? detail.episodeList : [];
   if (input.mediaType === 'movie') return list;
-  if (metadata.episodeNid != null) return [{ nid: metadata.episodeNid }];
+  if (metadata && metadata.episodeNid != null) return [{ nid: metadata.episodeNid }];
   var wanted = String(input.episode);
   for (var i = 0; i < list.length; i++) {
     if (String(list[i].name).trim() === wanted) return [list[i]];
@@ -535,7 +530,7 @@ function fetchEpisodeStreams(vodId, nid) {
   });
 }
 
-function toStream(item, ctx) {
+function toStream(item, ctx, rawInfo) {
   if (!item || !item.url) return null;
   var rawUrl = String(item.url).trim();
   if (rawUrl.indexOf('http') !== 0) return null;
@@ -543,8 +538,10 @@ function toStream(item, ctx) {
   var quality = Number.isFinite(resolution) ? Math.round(resolution) + 'p' : 'unknown';
   var resolutionName = String(item.resolutionName || '').trim();
   var title = resolutionName ? resolutionName + ' ' + quality : 'JPYY ' + quality;
+  var baseName = ctx.vodName || PROVIDER_NAME;
   return {
-    name: ctx.vodName || PROVIDER_NAME,
+    // name: ctx.vodName || PROVIDER_NAME,
+    name: rawInfo ? (baseName + ' [' + rawInfo + ']') : baseName,
     title: title,
     url: rawUrl,
     quality: quality
@@ -614,11 +611,7 @@ function pickVod(items, input, metadata) {
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
       if (Number(item.typeId1) !== targetId) continue;
-
-      // 🚀 新增：电视剧错误季号硬过滤
       if (input.mediaType === 'tv' && hasWrongSeasonMark(item.vodName, input.season)) continue;
-
-      // 🚀 A：年份硬过滤
       if (tmdbYear != null && item.vodYear) {
         var itemYear = Number.parseInt(String(item.vodYear).slice(0, 4), 10);
         if (Number.isFinite(itemYear) && Math.abs(itemYear - tmdbYear) > 2) continue;
@@ -638,12 +631,80 @@ function pickVod(items, input, metadata) {
 }
 
 // ==========================================
+// 🚀 新增：站内 ID 直接获取流, 对应 jpyy_strmeio addon 使用jp ID的插件
+// ==========================================
+function getStreamsByVodId(vodId, mediaType, season, episode) {
+  var input = {
+    tmdbId: String(vodId),
+    mediaType: mediaType,
+    season: season != null ? Number(season) : null,
+    episode: episode != null ? Number(episode) : null
+  };
+  var vodName = '';
+  return getDetail(vodId)
+    .then(function (detail) {
+      vodName = detail.vodName || detail.name || '';
+      var episodes = selectEpisodes(detail, input, {});
+      if (episodes.length === 0) throw new Error('no episode matched for ep ' + input.episode);
+      var validEps = episodes.filter(function (ep) { return ep.nid != null; });
+      return Promise.all(validEps.map(function (ep) {
+        return fetchEpisodeStreams(vodId, ep.nid)
+          .then(function (items) {
+            return items.map(function (item) {
+              var rawInfo = 'jp' + vodId + '|' + input.mediaType + '|' + input.season + '|' + input.episode;
+              return toStream(item, {
+                vodName: vodName,
+                tmdbId: input.tmdbId,
+                vodId: vodId,
+                nid: ep.nid
+              }, rawInfo);
+            }).filter(Boolean);
+          });
+      }));
+    })
+    .then(function (results) {
+      var streams = [];
+      var seen = new Set();
+      for (var i = 0; i < results.length; i++) {
+        for (var j = 0; j < results[i].length; j++) {
+          var s = results[i][j];
+          if (s && !seen.has(s.url)) {
+            seen.add(s.url);
+            streams.push(s);
+          }
+        }
+      }
+      if (streams.length === 0) throw new Error('no streams returned');
+      return streams;
+    });
+}
+
+// ==========================================
 // 主入口
 // ==========================================
 function getStreams(tmdbId, mediaType, season, episode) {
   var step = 'init';
+  var rawId = String(tmdbId || '').trim();
+
+  // 🚀 分支 1：站内 ID（jp 前缀）直接处理
+  if (/^jp\d+$/i.test(rawId)) {
+    var vodId = rawId.replace(/^jp/i, '');
+    var mediaTypeLower = String(mediaType || '').trim().toLowerCase();
+    return getStreamsByVodId(vodId, mediaTypeLower, season, episode)
+      .catch(function (err) {
+        var debugInfo = 'JPID[' + rawId + '|' + mediaType + '|' + season + '|' + episode + '][' + err.message + ']';
+        return [{
+          name: PROVIDER_NAME,
+          title: 'ERROR',
+          url: 'https://jpyy.debug/?msg=' + debugInfo,
+          quality: 'ERROR, 长按获取错误详情'
+        }];
+      });
+  }
+
+  // 🚀 分支 2：TMDB ID，走原有流程
   var input = {
-    tmdbId: String(tmdbId || '').trim(),
+    tmdbId: rawId,
     mediaType: String(mediaType || '').trim().toLowerCase(),
     season: season != null ? Number(season) : null,
     episode: episode != null ? Number(episode) : null
@@ -688,12 +749,13 @@ function getStreams(tmdbId, mediaType, season, episode) {
         return fetchEpisodeStreams(vod.vodId, ep.nid)
           .then(function (items) {
             return items.map(function (item) {
+              var rawInfo = rawId + '|' + input.mediaType + '|' + input.season + '|' + input.episode;
               return toStream(item, {
                 vodName: vodName,
                 tmdbId: input.tmdbId,
                 vodId: vod.vodId,
                 nid: ep.nid
-              });
+              }, rawInfo);
             }).filter(Boolean);
           });
       })).then(function (results) {
@@ -713,11 +775,14 @@ function getStreams(tmdbId, mediaType, season, episode) {
       });
     })
     .catch(function (err) {
+      // 🚀 调试信息写入 url，便于长按复制
+      var rawInfo = 'RAW[' + rawId + '|' + String(mediaType) + '|' + String(season) + '|' + String(episode) + ']';
+      var debugInfo = rawInfo + '[' + step + '] ' + err.message;
       return [{
         name: PROVIDER_NAME,
-        title: '[' + step + '] ' + err.message,
-        url: 'https://test.com/error',
-        quality: 'ERROR'
+        title: 'ERROR',
+        url: 'https://jpyy.debug/?msg=' + debugInfo,
+        quality: 'ERROR, 长按获取错误详情'
       }];
     });
 }

@@ -1,11 +1,11 @@
 {
   "name": "JPYY Repo",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "scrapers": [
     {
       "id": "jpyy",
-      "name": "JPYY",
-      "description": "JPYY streaming provider。 提供: 电影 电视剧 短剧 综艺 动漫 五大类型。",
+      "name": "JpyyProvider",
+      "description": "JPYY streaming provider。 针对 tt 和 jp 两种id获取stream。 提供: 电影 电视剧 短剧 综艺 动漫 五大类型。配合 jpyy_stream addon使用更佳！",
       "version": "1.0.0",
       "author": "wangqifei.eu.org",
       "supportedTypes": ["movie", "tv"],

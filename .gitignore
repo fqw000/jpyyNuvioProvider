@@ -122,7 +122,5 @@ DOCUMENTATION.md
 LICENSE
 package.json
 package-lock.json
-README.md
+# README.md
 server.js
-
-git rm -r --cached src build.js package.json package-lock.json server.js
