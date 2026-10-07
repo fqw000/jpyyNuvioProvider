@@ -4,7 +4,7 @@ const CryptoJS = require('crypto-js');
 const PROVIDER_NAME = 'jpyy';
 const BASE_URL = 'https://0996zp.com';
 const CLIENT_TYPE = 1;
-const DEVICE_ID = '39cb57bc-f77b-42c8-84e8-25fe857385d1';
+// const DEVICE_ID = '39cb57bc-f77b-42c8-84e8-25fe857385d1';
 const TMDB_API_KEY = 'e5c3c7269a147fee368c3649ddd98875';
 const SIGN_KEY = 'cb808529bae6b6be45ecfab29a4889bc';
 const MIN_VOD_SCORE = 0.5;
@@ -144,6 +144,22 @@ function chineseNumber(value) {
     return tens + '十' + ones;
   }
   return String(number);
+}
+
+/**
+ * 生成 UUID v4
+ * 
+ * 用于替代固定 Device ID，避免被站点识别为爬虫
+ * 每次 Worker 实例启动时生成一次
+ * 
+ * @returns {string} UUID 字符串
+ */
+function getUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 // ==========================================
@@ -512,7 +528,8 @@ function fetchEpisodeStreams(vodId, nid) {
     headers: {
       Accept: 'application/json, text/plain, */*',
       'client-type': String(CLIENT_TYPE),
-      deviceId: DEVICE_ID,
+      // deviceId: DEVICE_ID,
+      deviceId: getUUID(),
       sign: sign,
       t: String(t),
       authorization: '',
