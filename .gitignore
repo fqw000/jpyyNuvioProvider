@@ -120,8 +120,7 @@ src/jpyy/
 build.js
 DOCUMENTATION.md
 LICENSE
-package.json
-package-lock.json
+
 # README.md
 server.js
 aesdecryptor
