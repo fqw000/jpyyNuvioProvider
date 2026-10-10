@@ -190,7 +190,7 @@ function parseRscRecords(body) {
   var current = null;
   function flush() {
     if (!current) return;
-    try { values.push(JSON.parse(current.raw.trim())); } catch (e) {}
+    try { values.push(JSON.parse(current.raw.trim())); } catch (e) { }
     current = null;
   }
   var lines = String(body).split(/\r?\n/);
@@ -206,7 +206,7 @@ function parseRscRecords(body) {
   }
   flush();
   if (values.length === 0) {
-    try { values.push(JSON.parse(body)); } catch (e) {}
+    try { values.push(JSON.parse(body)); } catch (e) { }
   }
   return values;
 }
@@ -501,6 +501,7 @@ function getDetail(vodId) {
 function selectEpisodes(detail, input, metadata) {
   var list = Array.isArray(detail.episodeList) ? detail.episodeList : [];
   if (input.mediaType === 'movie') return list;
+
   if (metadata && metadata.episodeNid != null) return [{ nid: metadata.episodeNid }];
   var wanted = String(input.episode);
   for (var i = 0; i < list.length; i++) {
@@ -547,7 +548,21 @@ function fetchEpisodeStreams(vodId, nid) {
   });
 }
 
-function toStream(item, ctx, rawInfo) {
+/**
+ * 格式化 stream.name 字段，与 jpyy Stremio Addon 保持一致
+ *   - movie:  {影片名称} [ {完整ID} ]
+ *   - series: {影片名称} [ {完整ID} · SxxExx ]
+ */
+function formatStreamName(movieName, fullId, routeType, season, episode) {
+  if (routeType === 'movie') {
+    return movieName + ' [ ' + fullId + ' ]';
+  }
+  var ss = String(season != null ? season : 1).padStart(2, '0');
+  var ee = String(episode != null ? episode : 1).padStart(2, '0');
+  return movieName + ' [ ' + fullId + ' · S' + ss + 'E' + ee + ' ]';
+}
+
+function toStream(item, ctx) {
   if (!item || !item.url) return null;
   var rawUrl = String(item.url).trim();
   if (rawUrl.indexOf('http') !== 0) return null;
@@ -556,9 +571,9 @@ function toStream(item, ctx, rawInfo) {
   var resolutionName = String(item.resolutionName || '').trim();
   var title = resolutionName ? resolutionName + ' ' + quality : 'JPYY ' + quality;
   var baseName = ctx.vodName || PROVIDER_NAME;
+  var displayName = formatStreamName(baseName, ctx.fullId, ctx.routeType, ctx.season, ctx.episode);
   return {
-    // name: ctx.vodName || PROVIDER_NAME,
-    name: rawInfo ? (baseName + ' [' + rawInfo + ']') : baseName,
+    name: displayName,
     title: title,
     url: rawUrl,
     quality: quality
@@ -661,6 +676,10 @@ function getStreamsByVodId(vodId, mediaType, season, episode) {
   return getDetail(vodId)
     .then(function (detail) {
       vodName = detail.vodName || detail.name || '';
+      // 🚀 根据 detail.typeId1 修正媒体类型，避免电影被误判为剧集
+      if (detail.typeId1 === 1) {
+        input.mediaType = 'movie';
+      }
       var episodes = selectEpisodes(detail, input, {});
       if (episodes.length === 0) throw new Error('no episode matched for ep ' + input.episode);
       var validEps = episodes.filter(function (ep) { return ep.nid != null; });
@@ -668,13 +687,13 @@ function getStreamsByVodId(vodId, mediaType, season, episode) {
         return fetchEpisodeStreams(vodId, ep.nid)
           .then(function (items) {
             return items.map(function (item) {
-              var rawInfo = 'jp' + vodId + '|' + input.mediaType + '|' + input.season + '|' + input.episode;
               return toStream(item, {
                 vodName: vodName,
-                tmdbId: input.tmdbId,
-                vodId: vodId,
-                nid: ep.nid
-              }, rawInfo);
+                fullId: 'jp' + vodId,
+                routeType: input.mediaType,
+                season: input.season,
+                episode: input.episode
+              });
             }).filter(Boolean);
           });
       }));
@@ -747,6 +766,11 @@ function getStreams(tmdbId, mediaType, season, episode) {
       if (!vod) return [];
       step = 'getDetail';
       return getDetail(vod.vodId).then(function (detail) {
+        // 🚀 根据 detail.typeId1 修正媒体类型
+        if (detail.typeId1 === 1) {
+          input.mediaType = 'movie';
+        }
+
         return { metadata: ctx.metadata, vod: vod, detail: detail };
       });
     })
@@ -766,13 +790,13 @@ function getStreams(tmdbId, mediaType, season, episode) {
         return fetchEpisodeStreams(vod.vodId, ep.nid)
           .then(function (items) {
             return items.map(function (item) {
-              var rawInfo = rawId + '|' + input.mediaType + '|' + input.season + '|' + input.episode;
               return toStream(item, {
                 vodName: vodName,
-                tmdbId: input.tmdbId,
-                vodId: vod.vodId,
-                nid: ep.nid
-              }, rawInfo);
+                fullId: rawId,
+                routeType: input.mediaType,
+                season: input.season,
+                episode: input.episode
+              });
             }).filter(Boolean);
           });
       })).then(function (results) {
